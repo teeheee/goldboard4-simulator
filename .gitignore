@@ -14,6 +14,7 @@ callgrind.out.*
 *.o
 *.elf
 *.objdump
+*.gch
 perf.data
 .DS_Store
 .make.options*
