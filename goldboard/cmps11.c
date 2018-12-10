@@ -13,7 +13,7 @@ void cmps11_init(struct avr_t* avr, cmps11_t* cmps, int adress){
 
 
 void cmps11_setValue(cmps11_t* cmps, int data){
-  cmps->i2c_sensor.output[1] = (uint8_t)(angle*255.0/360.0);
+  cmps->i2c_sensor.output[1] = (uint8_t)(data*255.0/360.0);
   cmps->i2c_sensor.output[2] = data;
   cmps->i2c_sensor.output[3] = data>>8;
 }

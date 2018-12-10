@@ -64,10 +64,12 @@ int main(int argc, char *argv[])
 
 	init_motor(avr);
 
-	pcf8574_t pcf;
+	pcf8574_t pcf1;
+	pcf8574_t pcf2;
 	cmps11_t cmps;
 
-	pcf8574_init(avr,&pcf,0x40);
+	pcf8574_init(avr,&pcf1,0x70);
+	pcf8574_init(avr,&pcf2,0x74);
 	cmps11_init(avr,&cmps,0xC0);
 
 	// initialize our 'peripheral', setting the mask to allow read and write
@@ -108,7 +110,8 @@ int main(int argc, char *argv[])
 		{
 			x = (x+1)%360;
 			printf("Motor_PWM: %f,%f,%f,%f\r\n",get_pwm_value(0),get_pwm_value(1),get_pwm_value(2),get_pwm_value(3));
-			printf("PCF: %d\r\n", pcf8574_getValue(&pcf));
+			printf("PCF1: %d\r\n", pcf8574_getValue(&pcf1));
+			printf("PCF2: %d\r\n", pcf8574_getValue(&pcf2));
 			cmps11_setValue(&cmps,x);
 			last_cycle = avr->cycle;
 		}

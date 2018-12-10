@@ -39,6 +39,7 @@ include ${simavr}/Makefile.common
 board = ${OBJ}/${target}.elf
 
 ${board} : ${OBJ}/i2c_sensor.o
+${board} : ${OBJ}/cmps11.o
 ${board} : ${OBJ}/pcf8574.o
 ${board} : ${OBJ}/motor.o
 ${board} : ${OBJ}/${target}.o
