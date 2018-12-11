@@ -17,3 +17,8 @@ The codebase written by me is in the goldboard folder. The rest is simavr relate
 
 * configure Robot with Json file (gui?)
 * make a small simulation enviroment with ball and opponents
+
+
+## dependencies
+
+>> sudo apt-get install freeglut3-dev libelf-dev gcc-avr avr-libc libncurses-dev
