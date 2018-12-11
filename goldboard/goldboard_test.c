@@ -31,10 +31,13 @@
 #include "sim_vcd_file.h"
 #include "sim_time.h"
 #include "avr_twi.h"
+#include "uart_pty.h"
+#include "avr_uart.h"
 
 #include "motor.h"
 #include "pcf8574.h"
 #include "cmps11.h"
+#include "user_interface.h"
 
 avr_t * avr = NULL;
 avr_vcd_t vcd_file;
@@ -48,8 +51,8 @@ int main(int argc, char *argv[])
 	printf("Firmware pathname is %s\n", fname);
 	elf_read_firmware(fname, &f);
 
-  memcpy(f.mmcu,"atmega32",8);
-  f.frequency = 16000000UL;
+	memcpy(f.mmcu,"atmega32",8);
+	f.frequency = 16000000UL;
 
 	printf("firmware %s f=%d mmcu=%s\n", fname, (int)f.frequency, f.mmcu);
 
@@ -102,19 +105,26 @@ int main(int argc, char *argv[])
 
 	int state = cpu_Running;
 	uint64_t last_cycle = 0;
-	int x = 0;
-	while ((state != cpu_Done) && (state != cpu_Crashed))
+
+	robot_status_t robot_status;
+	user_interface_init(&robot_status);
+
+	uart_pty_t uart;
+
+	uart_pty_init(avr, &uart);
+	uart_pty_connect(&uart, 0);
+		
+	FILE* display_stream = robot_status.serial_output_stream;
+
+	while ((state != cpu_Done) && (state != cpu_Crashed) && !robot_status.abort)
 	{
 		state = avr_run(avr);
-		if(avr->cycle - last_cycle > avr_hz_to_cycles(avr, 10))
+		if(avr->cycle - last_cycle > avr_hz_to_cycles(avr, 10) )
 		{
-			x = (x+1)%360;
-			printf("Motor_PWM: %f,%f,%f,%f\r\n",get_pwm_value(0),get_pwm_value(1),get_pwm_value(2),get_pwm_value(3));
-			printf("PCF1: %d\r\n", pcf8574_getValue(&pcf1));
-			printf("PCF2: %d\r\n", pcf8574_getValue(&pcf2));
-			cmps11_setValue(&cmps,x);
+			user_interface_display(&robot_status);
 			last_cycle = avr->cycle;
 		}
-
+		if(!uart_pty_fifo_isempty(&uart.tap.out)) 
+			putc(uart_pty_fifo_read(&uart.pty.out), display_stream);
 	}
 }

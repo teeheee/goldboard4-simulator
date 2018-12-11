@@ -38,6 +38,7 @@ include ${simavr}/Makefile.common
 
 board = ${OBJ}/${target}.elf
 
+${board} : ${OBJ}/user_interface.o
 ${board} : ${OBJ}/i2c_sensor.o
 ${board} : ${OBJ}/i2c_device.o
 ${board} : ${OBJ}/cmps11.o
