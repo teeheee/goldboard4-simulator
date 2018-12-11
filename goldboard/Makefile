@@ -28,9 +28,11 @@ IPATH += ${simavr}/include
 IPATH += ${simavr}/simavr/sim
 
 VPATH = .
+VPATH = ${simavr}/examples/parts
 #VPATH += ${simavr}/examples/shared
 #VPATH += ${simavr}/examples/parts
 
+LDFLAGS += -lpthread -lutil -lncurses
 
 all: obj ${target}
 
@@ -38,6 +40,8 @@ include ${simavr}/Makefile.common
 
 board = ${OBJ}/${target}.elf
 
+
+${board} : ${OBJ}/uart.o
 ${board} : ${OBJ}/user_interface.o
 ${board} : ${OBJ}/i2c_sensor.o
 ${board} : ${OBJ}/i2c_device.o

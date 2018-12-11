@@ -320,4 +320,3 @@ uart_pty_connect(
 	} else
 		printf("note: export SIMAVR_UART_XTERM=1 and install picocom to get a terminal\n");
 }
-

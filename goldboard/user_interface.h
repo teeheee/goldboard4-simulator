@@ -3,6 +3,10 @@
 
 #include <ncurses.h>
 #include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "uart.h"
 
 #define SERIAL_BUFFER_SIZE 1024
 
@@ -11,8 +15,7 @@ typedef struct robot_status_t{
   int angle;
   int line_sensors[16];
   int ultrasonic_sensors[4];
-  FILE* serial_output_stream;
-  uint8_t buffer[SERIAL_BUFFER_SIZE];
+  uart_t* uart;
   int abort;
 } robot_status_t;
 

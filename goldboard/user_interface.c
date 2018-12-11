@@ -1,8 +1,9 @@
 #include "user_interface.h"
 
+WINDOW *win;
+WINDOW *win_up;
 
 void user_interface_init(robot_status_t* robot_status){
-	robot_status->serial_output_stream = fmemopen(robot_status->buffer, SERIAL_BUFFER_SIZE, "rw");
 	for(int i = 0; i < 16; i++){
 		if( i < 4 ){
 			robot_status->motor_speed[i] = 0;
@@ -12,31 +13,40 @@ void user_interface_init(robot_status_t* robot_status){
 	}
 	robot_status->angle = 0;
 	robot_status->abort = 0;
-	memset(robot_status->buffer, 0, SERIAL_BUFFER_SIZE);
-	initscr();			/* Start curses mode 		*/
-	raw();				/* Line buffering disabled	*/
-	keypad(stdscr, TRUE);		/* We get F1, F2 etc..		*/
+	raw();
 	noecho();
+  initscr();			/* Start curses mode 		*/
+  win = newwin(LINES-5, COLS, 5, 0);
+	scrollok(win, 1);
+  win_up = newwin(5, COLS, 0, 0);
 }
 
-
-char buff[255];
 void user_interface_display(robot_status_t* robot_status){
-	printw("Type any character to see it in bold\n");
-	int ch = getch();			/* If raw() hadn't been called
-					 * we have to press enter before it
-					 * gets to the program 		*/
-	if(ch == KEY_F(1)){		/* Without keypad enabled this will */
-		printw("F1 Key pressed");/*  not get to us either	*/
-					/* Without noecho() some ugly escape
-					 * charachters might have been printed
-					 * on screen			*/
-		robot_status->abort = 1;
+	wclear(win_up);
+	mvwprintw(win_up,0,0,"motor_speed:");
+	for(int i = 0; i < 4; i++){
+		mvwprintw(win_up,0,20+10*i,"%d", robot_status->motor_speed[i]);
 	}
-	else
-	{	
-		FILE* stream = robot_status->serial_output_stream;
-		printw(fgets(buff, 255, stream));
+	mvwprintw(win_up,1,0,"line_sensors:");
+	for(int i = 0; i < 16; i++){
+		mvwprintw(win_up,1,20+2*i,"%d",robot_status->line_sensors[i]);
 	}
-	refresh();			/* Print it on to the real screen */
+	mvwprintw(win_up,2,0,"ultrasonic_sensors:");
+	for(int i = 0; i < 4; i++){
+		mvwprintw(win_up,2,20+10*i,"%.2f",robot_status->ultrasonic_sensors[i]);
+	}
+	mvwprintw(win_up,3,0,"kompass:");
+	mvwprintw(win_up,3,20,"%d",robot_status->angle);
+	for (int j = 0;  j < COLS;  j++)
+		mvwaddch(win_up, 4,j,ACS_HLINE);
+	wrefresh(win_up);
+
+	if(!uart_is_empty(robot_status->uart))
+	{
+		char c = uart_getc(robot_status->uart);
+		if(c!='\r'){
+			waddch(win, c);
+			wrefresh(win);
+		}
+	}
 }

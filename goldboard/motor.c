@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 pwm_info motor_pwm_info[4];
+pcf8574_t* motor_pcf;
 
 void pwm_callback(struct avr_irq_t * avr, unsigned int value, void * param){
   pwm_info* motor_pwm = (pwm_info*)param;
@@ -24,7 +25,8 @@ void pwm_callback(struct avr_irq_t * avr, unsigned int value, void * param){
   }
 }
 
-void init_motor(avr_t *avr){
+void init_motor(avr_t *avr, pcf8574_t* pcf){
+  motor_pcf = pcf;
   for(int i = 0; i < 4; i++){
     motor_pwm_info[i].last_call = 0;
     motor_pwm_info[i].pin = i;
@@ -40,5 +42,10 @@ void init_motor(avr_t *avr){
 
 
 double get_pwm_value(int id){
-  return motor_pwm_info[id].pwm_value;
+  uint8_t dir = pcf8574_getValue(motor_pcf);
+  if(dir & (1 << (id*2)))
+    return motor_pwm_info[id].pwm_value;
+  if(dir & (1 << (id*2+1)))
+    return -motor_pwm_info[id].pwm_value;
+  return 0;
 }
