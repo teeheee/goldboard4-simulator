@@ -1,46 +1,44 @@
-# Makefile
+TARGET_EXEC ?= simulator
 
-# Normal build will link against the shared library for simavr
-# in the current build tree, so you don't have to 'install' to
-# run simavr or the examples.
-#
-# For package building, you will need to pass RELEASE=1 to make
-RELEASE	?= 0
+BUILD_DIR ?= ./build
+SRC_DIRS ?= ./
 
-DESTDIR = /usr/local
-PREFIX = ${DESTDIR}
+#INC_DIRS = simavr simavr/cores simavr/cores/avr simavr/sim simavr/sim/avr
 
-.PHONY: doc
+SRCS := $(shell find $(SRC_DIRS) -name "*.cpp" -or -name "*.c" -or -name "*.s")
+OBJS := $(SRCS:%=$(BUILD_DIR)/%.o)
+DEPS := $(OBJS:.o=.d)
 
-all:	build-simavr build-tests build-examples build-parts
+INC_DIRS := $(shell find $(SRC_DIRS) -type d)
+INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
-build-simavr:
-	$(MAKE) -C simavr RELEASE=$(RELEASE)
+CPPFLAGS ?= $(INC_FLAGS) -MMD -MP -lncurses -lelf -lpthread -lutil -lrt
+LDFLAGS ?= -MMD -MP -lncurses -lelf -lpthread -lutil -lrt
 
-build-tests: build-simavr
-	$(MAKE) -C tests RELEASE=$(RELEASE)
+$(BUILD_DIR)/$(TARGET_EXEC): $(OBJS)
+	$(CC) $(OBJS) -o $@ $(LDFLAGS); cp $(BUILD_DIR)/$(TARGET_EXEC) $(TARGET_EXEC)
 
-build-examples: build-simavr
-	$(MAKE) -C examples RELEASE=$(RELEASE)
+# assembly
+$(BUILD_DIR)/%.s.o: %.s
+	$(MKDIR_P) $(dir $@)
+	$(AS) $(ASFLAGS) -c $< -o $@
 
-build-parts: build-examples
-	$(MAKE) -C examples/parts RELEASE=$(RELEASE)
+# c source
+$(BUILD_DIR)/%.c.o: %.c
+	$(MKDIR_P) $(dir $@)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
-install: install-simavr install-parts
+# c++ source
+$(BUILD_DIR)/%.cpp.o: %.cpp
+	$(MKDIR_P) $(dir $@)
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
-install-simavr:
-	$(MAKE) -C simavr install RELEASE=$(RELEASE) DESTDIR=$(DESTDIR) PREFIX=$(PREFIX)
 
-install-parts:
-	$(MAKE) -C examples/parts install RELEASE=$(RELEASE) DESTDIR=$(DESTDIR) PREFIX=$(PREFIX)
-
-doc:
-	$(MAKE) -C doc RELEASE=$(RELEASE)
+.PHONY: clean
 
 clean:
-	$(MAKE) -C simavr clean
-	$(MAKE) -C tests clean
-	$(MAKE) -C examples clean
-	$(MAKE) -C examples/parts clean
-	$(MAKE) -C doc clean
+	$(RM) -r $(BUILD_DIR)
 
+-include $(DEPS)
+
+MKDIR_P ?= mkdir -p
