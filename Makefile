@@ -1,9 +1,24 @@
-#MING_PATH = /home/ulbrich/other_stuff/mingw/bin
-#CC = $(MING_PATH)/x86_64-w64-mingw32-gcc
-#AS = $(MING_PATH)/x86_64-w64-mingw32-as
-#CXX = $(MING_PATH)/x86_64-w64-mingw32-c++
+
+OS=linux
 
 TARGET_EXEC ?= simulator
+
+ifeq ($(OS),win)
+  MING_PATH = /home/ulbrich/other_stuff/mingw/bin
+  CC = $(MING_PATH)/x86_64-w64-mingw32-gcc
+  AS = $(MING_PATH)/x86_64-w64-mingw32-as
+  CXX = $(MING_PATH)/x86_64-w64-mingw32-c++
+  TARGET_EXEC = simulator.exe
+endif
+
+ifeq ($(OS),winlinux)
+  CC = i686-w64-mingw32-gcc
+  AS = i686-w64-mingw32-as
+  CXX = i686-w64-mingw32-g++
+  TARGET_EXEC = simulator.exe
+endif
+
+
 
 BUILD_DIR ?= ./build
 SRC_DIRS ?= ./src
@@ -17,26 +32,32 @@ DEPS := $(OBJS:.o=.d)
 INC_DIRS := $(shell find $(SRC_DIRS) -type d)
 INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
-CPPFLAGS ?= $(INC_FLAGS) -MMD -MP -lutil -lrt -lpthread -lelf #--std=gnu99 -I./avr-libc/include 
-LDFLAGS ?= -MMD -MP -lutil -lrt -lpthread -lelf
+CFLAGS ?= $(INC_FLAGS) -MMD -MP 
+LDFLAGS ?= -MMD -MP 
+
+
+ifeq ($(OS),win)
+  CFLAGS += -lws2_32 --std=gnu99 -I./avr-libc/include
+  LDFLAGS += -lws2_32
+endif
+
+ifeq ($(OS),winlinux)
+  CFLAGS += -lpthread -lws2_32
+  LDFLAGS += -lpthread -lws2_32
+endif
+
+ifeq ($(OS),linux)
+  CFLAGS += -lpthread -lrt -lutil -lelf
+  LDFLAGS += -lpthread -lrt -lutil -lelf
+endif
 
 $(BUILD_DIR)/$(TARGET_EXEC): $(OBJS)
 	$(CC) $(OBJS) -o $@ $(LDFLAGS); cp $(BUILD_DIR)/$(TARGET_EXEC) $(TARGET_EXEC)
 
-# assembly
-$(BUILD_DIR)/%.s.o: %.s
-	$(MKDIR_P) $(dir $@)
-	$(AS) $(ASFLAGS) -c $< -o $@
-
 # c source
 $(BUILD_DIR)/%.c.o: %.c
 	$(MKDIR_P) $(dir $@)
-	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
-
-# c++ source
-$(BUILD_DIR)/%.cpp.o: %.cpp
-	$(MKDIR_P) $(dir $@)
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
 
 
 .PHONY: clean
@@ -47,3 +68,4 @@ clean:
 -include $(DEPS)
 
 MKDIR_P ?= mkdir -p
+
