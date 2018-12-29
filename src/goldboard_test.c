@@ -1,7 +1,7 @@
 /*
-	i2ctest.c
+	run_avr.c
 
-	Copyright 2008-2011 Michel Pollet <buserror@gmail.com>
+	Copyright 2008, 2010 Michel Pollet <buserror@gmail.com>
 
  	This file is part of simavr.
 
@@ -21,81 +21,186 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
 #include <libgen.h>
-#include <pthread.h>
-
+#include <string.h>
+#include <signal.h>
 #include "sim_avr.h"
 #include "sim_elf.h"
+#include "sim_core.h"
 #include "sim_gdb.h"
-#include "sim_vcd_file.h"
-#include "sim_time.h"
-#include "avr_twi.h"
-#include "uart.h"
 #include "sim_hex.h"
+#include "sim_vcd_file.h"
 
-#include "motor.h"
-#include "pcf8574.h"
-#include "cmps11.h"
+#include "sim_core_decl.h"
 
-
-avr_t * avr = NULL;
-avr_vcd_t vcd_file;
-
-
-int main(int argc, char *argv[])
+static void
+display_usage(
+	const char * app)
 {
-	elf_firmware_t f;
-	const char * fname =  "gb_programm.hex";
-	ihex_chunk_p chunk = NULL;
-	memcpy(f.mmcu,"atmega32\0",9);
-	f.frequency = 16000000UL;
-  uint32_t loadBase = AVR_SEGMENT_OFFSET_FLASH;
-	int cnt = read_ihex_chunks(fname, &chunk);
-	printf("Loaded %d section of ihex\n", cnt);
-	for (int ci = 0; ci < cnt; ci++) {
-		if (chunk[ci].baseaddr < (1*1024*1024)) {
+	printf("Usage: %s [...] <firmware>\n", app);
+	printf( "		[--freq|-f <freq>]  Sets the frequency for an .hex firmware\n"
+			"		[--mcu|-m <device>] Sets the MCU type for an .hex firmware\n"
+			"       [--list-cores]      List all supported AVR cores and exit\n"
+			"       [--help|-h]         Display this usage message and exit\n"
+			"       [--trace, -t]       Run full scale decoder trace\n"
+			"       [-ti <vector>]      Add traces for IRQ vector <vector>\n"
+			"       [--gdb|-g]          Listen for gdb connection on port 1234\n"
+			"       [-ff <.hex file>]   Load next .hex file as flash\n"
+			"       [-ee <.hex file>]   Load next .hex file as eeprom\n"
+			"       [--input|-i <file>] A .vcd file to use as input signals\n"
+			"       [-v]                Raise verbosity level\n"
+			"                           (can be passed more than once)\n"
+			"       <firmware>          A .hex or an ELF file. ELF files are\n"
+			"                           prefered, and can include debugging syms\n");
+	exit(1);
+}
+
+static void
+list_cores()
+{
+	printf( "Supported AVR cores:\n");
+	for (int i = 0; avr_kind[i]; i++) {
+		printf("       ");
+		for (int ti = 0; ti < 4 && avr_kind[i]->names[ti]; ti++)
+			printf("%s ", avr_kind[i]->names[ti]);
+		printf("\n");
+	}
+	exit(1);
+}
+
+static avr_t * avr = NULL;
+
+static void
+sig_int(
+		int sign)
+{
+	printf("signal caught, simavr terminating\n");
+	if (avr)
+		avr_terminate(avr);
+	exit(0);
+}
+
+int
+main(
+		int argc,
+		char *argv[])
+{
+	elf_firmware_t f = {{0}};
+	uint32_t f_cpu = 0;
+	int trace = 0;
+	int gdb = 0;
+	int log = 1;
+	char name[24] = "";
+	uint32_t loadBase = AVR_SEGMENT_OFFSET_FLASH;
+	int trace_vectors[8] = {0};
+	int trace_vectors_count = 0;
+	const char *vcd_input = NULL;
+
+	if (argc == 1)
+		display_usage(basename(argv[0]));
+
+	f_cpu = 16000000;
+	snprintf(name, sizeof(name), "%s", "atmega32");
+	for (int pi = 1; pi < argc; pi++) {
+		if (!strcmp(argv[pi], "--list-cores")) {
+			list_cores();
+		} else if (!strcmp(argv[pi], "-h") || !strcmp(argv[pi], "--help")) {
+			display_usage(basename(argv[0]));
+		} else if (!strcmp(argv[pi], "-t") || !strcmp(argv[pi], "--trace")) {
+			trace++;
+		} else if (!strcmp(argv[pi], "-g") || !strcmp(argv[pi], "--gdb")) {
+			gdb++;
+		} else if (!strcmp(argv[pi], "-v")) {
+			log++;
+		} else if (!strcmp(argv[pi], "-ee")) {
+			loadBase = AVR_SEGMENT_OFFSET_EEPROM;
+		} else if (!strcmp(argv[pi], "-ff")) {
+			loadBase = AVR_SEGMENT_OFFSET_FLASH;
+		} else if (argv[pi][0] != '-') {
+			char * filename = argv[pi];
+			char * suffix = strrchr(filename, '.');
+			if (suffix && !strcasecmp(suffix, ".hex")) {
+				if (!name[0] || !f_cpu) {
+					fprintf(stderr, "%s, %d", name, f_cpu);
+					fprintf(stderr, "%s: --mcu and --freq are mandatory to load .hex files\n", argv[0]);
+					exit(1);
+				}
+				ihex_chunk_p chunk = NULL;
+				int cnt = read_ihex_chunks(filename, &chunk);
+				if (cnt <= 0) {
+					fprintf(stderr, "%s: Unable to load IHEX file %s\n",
+						argv[0], argv[pi]);
+					exit(1);
+				}
+				printf("Loaded %d section of ihex\n", cnt);
+				for (int ci = 0; ci < cnt; ci++) {
+					if (chunk[ci].baseaddr < (1*1024*1024)) {
 						f.flash = chunk[ci].data;
 						f.flashsize = chunk[ci].size;
 						f.flashbase = chunk[ci].baseaddr;
 						printf("Load HEX flash %08x, %d\n", f.flashbase, f.flashsize);
-		} else if (chunk[ci].baseaddr >= AVR_SEGMENT_OFFSET_EEPROM ||
+					} else if (chunk[ci].baseaddr >= AVR_SEGMENT_OFFSET_EEPROM ||
 							chunk[ci].baseaddr + loadBase >= AVR_SEGMENT_OFFSET_EEPROM) {
 						// eeprom!
 						f.eeprom = chunk[ci].data;
 						f.eesize = chunk[ci].size;
 						printf("Load HEX eeprom %08x, %d\n", chunk[ci].baseaddr, f.eesize);
+					}
+				}
+			} else {
+				{
+					fprintf(stderr, "%s: Unable to load firmware from file %s\n",
+							argv[0], filename);
+					exit(1);
+				}
+			}
 		}
-  }
+	}
+
+	if (strlen(name))
+		strcpy(f.mmcu, name);
+	if (f_cpu)
+		f.frequency = f_cpu;
+
 	avr = avr_make_mcu_by_name(f.mmcu);
-	avr_init(avr);
-	avr_load_firmware(avr, &f);
-	avr->gdb_port = 1234;
-	if (0) {
-			avr_gdb_init(avr);
+	if (!avr) {
+		fprintf(stderr, "%s: AVR '%s' not known\n", argv[0], f.mmcu);
+		exit(1);
 	}
-
-
-	pcf8574_t pcf1;
-	pcf8574_t pcf2;
-	cmps11_t cmps;
-	uart_t uart;
-
-	pcf8574_init(avr,&pcf1,0x70);
-	pcf8574_init(avr,&pcf2,0x74);
-	init_motor(avr, &pcf1);
-	cmps11_init(avr,&cmps,0xC0);
-	uart_init(avr, &uart);
-
-
-	printf( "Simulation launching:\n");
-	int state = cpu_Running;
-	while ((state != cpu_Done) && (state != cpu_Crashed))
-	{
-		state = avr_run(avr);
-		if(avr->cycle%100==0)
-		{
-      printf("running\r\n");
+	avr_init(avr);
+	avr->log = (log > LOG_TRACE ? LOG_TRACE : log);
+	avr->trace = trace;
+	avr_load_firmware(avr, &f);
+	if (f.flashbase) {
+		printf("Attempted to load a bootloader at %04x\n", f.flashbase);
+		avr->pc = f.flashbase;
+	}
+	for (int ti = 0; ti < trace_vectors_count; ti++) {
+		for (int vi = 0; vi < avr->interrupts.vector_count; vi++)
+			if (avr->interrupts.vector[vi]->vector == trace_vectors[ti])
+				avr->interrupts.vector[vi]->trace = 1;
+	}
+	if (vcd_input) {
+		static avr_vcd_t input;
+		if (avr_vcd_init_input(avr, vcd_input, &input)) {
+			fprintf(stderr, "%s: Warning: VCD input file %s failed\n", argv[0], vcd_input);
 		}
 	}
+
+	// even if not setup at startup, activate gdb if crashing
+	avr->gdb_port = 1234;
+	if (gdb) {
+		avr->state = cpu_Stopped;
+		avr_gdb_init(avr);
+	}
+
+
+	for (;;) {
+		int state = avr_run(avr);
+		if (state == cpu_Done || state == cpu_Crashed)
+			break;
+	}
+
+	avr_terminate(avr);
 }
+
