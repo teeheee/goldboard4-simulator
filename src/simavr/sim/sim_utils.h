@@ -33,6 +33,9 @@ typedef struct argv_t {
 	char * argv[];
 } argv_t, *argv_p;
 
+
+
+char* strsep(char** stringp, const char* delim);
 /*
  * Allocate a argv_t structure, split 'line' into words (destructively)
  * and fills up argc, and argv fields with pointers to the individual

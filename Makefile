@@ -1,5 +1,5 @@
 
-OS=linux
+OS=winlinux
 
 TARGET_EXEC ?= simulator
 
@@ -47,8 +47,8 @@ ifeq ($(OS),winlinux)
 endif
 
 ifeq ($(OS),linux)
-  CFLAGS += -lpthread -lrt -lutil -lelf
-  LDFLAGS += -lpthread -lrt -lutil -lelf
+  CFLAGS += -lpthread -lrt -lutil 
+  LDFLAGS += -lpthread -lrt -lutil
 endif
 
 $(BUILD_DIR)/$(TARGET_EXEC): $(OBJS)

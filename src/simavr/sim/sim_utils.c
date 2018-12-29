@@ -24,8 +24,30 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <stddef.h>
 
 #include "sim_utils.h"
+
+
+char* strsep(char** stringp, const char* delim)
+{
+  char* start = *stringp;
+  char* p;
+
+  p = (start != NULL) ? strpbrk(start, delim) : NULL;
+
+  if (p == NULL)
+  {
+    *stringp = NULL;
+  }
+  else
+  {
+    *p = '\0';
+    *stringp = p + 1;
+  }
+
+  return start;
+}
 
 static argv_p
 argv_realloc(
