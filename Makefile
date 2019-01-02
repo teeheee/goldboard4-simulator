@@ -1,5 +1,5 @@
 
-OS=winlinux
+OS=linux
 
 TARGET_EXEC ?= simulator
 
@@ -59,6 +59,10 @@ $(BUILD_DIR)/%.c.o: %.c
 	$(MKDIR_P) $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
+# cpp source
+$(BUILD_DIR)/%.cpp.o: %.cpp
+	$(MKDIR_P) $(dir $@)
+	$(CXX) $(CFLAGS) -c $< -o $@
 
 .PHONY: clean
 
