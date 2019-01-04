@@ -5,8 +5,8 @@
 
 template<unsigned int MEM_SIZE> class i2c_register : public i2c_device{
 public:
-   i2c_register(struct avr_t * aavr, uint8_t aaddress, const char* aname)
-   : i2c_device(aavr, aaddress, aname){ };
+   i2c_register(uint8_t aaddress, const char* aname)
+   : i2c_device(aaddress, aname){ };
    uint8_t read(){
      int tmp_index = register_index;
      register_index = (register_index+1)%MEM_SIZE;

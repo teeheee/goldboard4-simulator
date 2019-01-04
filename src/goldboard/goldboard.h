@@ -1,6 +1,7 @@
 #ifndef _GOLDBOARD_H_
 #define _GOLDBOARD_H_
 
+#include "i2c_device.h"
 #include "pcf8574.h"
 extern "C"{
 #include "pwm.h"
@@ -10,6 +11,7 @@ class goldboard{
 public:
   goldboard(struct avr_t* avr);
   ~goldboard();
+  void add_i2c_device(i2c_device &device);
 
   //interface function
   int get_led_status(int id);

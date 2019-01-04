@@ -5,7 +5,7 @@
 
 class pcf8574 : public i2c_device{
 public:
-  pcf8574(struct avr_t* avr, uint8_t address) : i2c_device(avr, address, "pcf8574"){
+  pcf8574(uint8_t address) : i2c_device(address, "pcf8574"){
     pin_state = 0;
   };
   uint8_t read_pins(){

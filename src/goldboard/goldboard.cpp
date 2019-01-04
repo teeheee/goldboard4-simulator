@@ -1,8 +1,8 @@
 #include "goldboard.h"
 
 goldboard::goldboard(struct avr_t* aavr)
-        : pcf_motor(aavr, 0x70),
-          pcf_digital(aavr, 0x7E),
+        : pcf_motor(0x70),
+          pcf_digital(0x7E),
           uart_obj(aavr)
 {
   avr = aavr;
@@ -12,10 +12,16 @@ goldboard::goldboard(struct avr_t* aavr)
   init_pwm(avr, &motor_pwm[3], 'B', 3);
   init_pwm(avr, &power_pwm[0], 'B', 4);
   init_pwm(avr, &power_pwm[1], 'B', 5);
+  add_i2c_device(pcf_motor);
+  add_i2c_device(pcf_digital);
 }
 
 goldboard::~goldboard(){
 
+}
+
+void goldboard::add_i2c_device(i2c_device &device){
+  device.attach(avr);
 }
 
 //interface function

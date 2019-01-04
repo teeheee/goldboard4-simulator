@@ -49,13 +49,14 @@ static void i2c_device_hook(struct avr_irq_t * irq, uint32_t value, void* adevic
 }
 
 
-i2c_device::i2c_device(struct avr_t * aavr, uint8_t aaddress, const char* name){
-  avr = aavr;
+i2c_device::i2c_device(uint8_t aaddress, const char* name){
   address = aaddress;
   selected = 0;
-  const char* c_names[2];
   c_names[0] = (std::string(name) + "_in").c_str();
   c_names[1] = (std::string(name) + "_out").c_str();
+}
+
+void i2c_device::attach(struct avr_t * avr){
   irq_list = avr_alloc_irq(&avr->irq_pool, 0, 2, c_names);
   avr_irq_register_notify(irq_list + TWI_IRQ_OUTPUT, i2c_device_hook, (void*)this);
   // "connect" the IRQs of the device to the TWI/i2c master of the AVR

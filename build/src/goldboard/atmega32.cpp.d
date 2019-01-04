@@ -1,4 +1,4 @@
-build/./src/goldboard_test.c.o: src/goldboard_test.c \
+build/./src/goldboard/atmega32.cpp.o: src/goldboard/atmega32.cpp \
  src/include/avr/signal.h src/include/avr/interrupt.h \
  src/include/avr/io.h src/include/avr/sfr_defs.h \
  src/include/avr/portpins.h src/include/avr/common.h \
@@ -11,7 +11,8 @@ build/./src/goldboard_test.c.o: src/goldboard_test.c \
  src/simavr/sim/sim_elf.h src/simavr/sim/avr/avr_mcu_section.h \
  src/simavr/sim/sim_core.h src/simavr/sim/sim_gdb.h \
  src/simavr/sim/sim_hex.h src/simavr/sim/sim_vcd_file.h \
- src/simavr/sim_core_decl.h src/simavr/sim_core_config.h
+ src/simavr/sim_core_decl.h src/simavr/sim_core_config.h \
+ src/goldboard/atmega32.h
 
 src/include/avr/signal.h:
 
@@ -66,3 +67,5 @@ src/simavr/sim/sim_vcd_file.h:
 src/simavr/sim_core_decl.h:
 
 src/simavr/sim_core_config.h:
+
+src/goldboard/atmega32.h:
