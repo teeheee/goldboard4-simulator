@@ -2,10 +2,8 @@
 #define _MOTOR_H_
 
 #include "sim_avr.h"
-#include "pcf8574.h"
 
-
-typedef struct pwm_info{
+typedef struct pwm_info_t{
   int pin;
   uint64_t last_call;
   uint64_t low_time;
@@ -13,10 +11,9 @@ typedef struct pwm_info{
   int last_pin_state;
   double pwm_value;
   avr_t* avr;
-} pwm_info;
+} pwm_info_t;
 
-
-void init_motor(avr_t *avr, pcf8574_t* pcf);
-double get_pwm_value(int id);
+void init_pwm(avr_t *avr, pwm_info_t* pwm_info, char port, int pin);
+double get_pwm_value(pwm_info_t* pwm_info);
 
 #endif

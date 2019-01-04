@@ -32,27 +32,31 @@ DEPS := $(OBJS:.o=.d)
 INC_DIRS := $(shell find $(SRC_DIRS) -type d)
 INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
-CFLAGS ?= $(INC_FLAGS) -MMD -MP 
-LDFLAGS ?= -MMD -MP 
+CFLAGS ?= $(INC_FLAGS) -MMD -MP  --std=gnu99 -DMCU=atmega32
+CXXFLAGS ?= $(INC_FLAGS) -MMD -MP -DMCU=atmega32
+LDFLAGS ?= -MMD -MP
 
 
 ifeq ($(OS),win)
-  CFLAGS += -lws2_32 --std=gnu99 -I./avr-libc/include
+  CFLAGS += -lws2_32 -I./avr-libc/include
+	CXXFLAGS += -lws2_32 -I./avr-libc/include
   LDFLAGS += -lws2_32
 endif
 
 ifeq ($(OS),winlinux)
   CFLAGS += -lpthread -lws2_32
+	CXXFLAGS += -lpthread -lws2_32
   LDFLAGS += -lpthread -lws2_32
 endif
 
 ifeq ($(OS),linux)
-  CFLAGS += -lpthread -lrt -lutil 
+  CFLAGS += -lpthread -lrt -lutil
   LDFLAGS += -lpthread -lrt -lutil
+	CXXFLAGS += -lpthread -lrt -lutil
 endif
 
 $(BUILD_DIR)/$(TARGET_EXEC): $(OBJS)
-	$(CC) $(OBJS) -o $@ $(LDFLAGS); cp $(BUILD_DIR)/$(TARGET_EXEC) $(TARGET_EXEC)
+	$(CXX) $(OBJS) -o $@ $(LDFLAGS); cp $(BUILD_DIR)/$(TARGET_EXEC) $(TARGET_EXEC)
 
 # c source
 $(BUILD_DIR)/%.c.o: %.c
@@ -62,7 +66,7 @@ $(BUILD_DIR)/%.c.o: %.c
 # cpp source
 $(BUILD_DIR)/%.cpp.o: %.cpp
 	$(MKDIR_P) $(dir $@)
-	$(CXX) $(CFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 .PHONY: clean
 
@@ -72,4 +76,3 @@ clean:
 -include $(DEPS)
 
 MKDIR_P ?= mkdir -p
-
