@@ -33,7 +33,7 @@ INC_DIRS := $(shell find $(SRC_DIRS) -type d)
 INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
 CFLAGS ?= $(INC_FLAGS) -MMD -MP  --std=gnu99 -DMCU=atmega32
-CXXFLAGS ?= $(INC_FLAGS) -MMD -MP -DMCU=atmega32
+CXXFLAGS ?= $(INC_FLAGS) -MMD -MP -DMCU=atmega32 -std=gnu++11
 LDFLAGS ?= -MMD -MP
 
 
