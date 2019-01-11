@@ -12,12 +12,14 @@ public:
   goldboard(struct avr_t* avr);
   ~goldboard();
   void add_i2c_device(i2c_device &device);
+  int run(int ms);
 
   //interface function
   int get_led_status(int id);
   double get_motor_speed(int id);
   double get_power_pin(int id);
   std::string get_serial_data();
+  int get_time();
 
   void set_pin_state(int id, int state);
   void set_analog_state(int id, int state);

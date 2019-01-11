@@ -1,46 +1,46 @@
 
 #include <iostream>
-
-#include "atmega32.h"
+#include <fstream>
+#include <sstream>
+#include "robot.h"
 #include "goldboard.h"
-#include "cmps11.h"
-#include "pixy.h"
-#include "usring.h"
-#include "server.h"
 #include "json11.h"
-#include "i2c_device.h"
-
+#include "user_interface.h"
 
 int main(int argc, char *argv[]){
-	atmega32 atmega("gb_programm.hex");
+	printf("read config.json...\r\n");
+	std::ifstream file_stream("config.json");
+	std::stringstream buffer;
+	std::string error_message = "";
+	buffer << file_stream.rdbuf();
+	json11::Json json_config = json11::Json::parse(buffer.str(), error_message);
+	if(json_config.is_null())
+	{
+		printf("error parsing config.json\r\n");
+		std::cout << error_message << std::endl;
+	  exit(0);
+	}
 
-	avr_t * avr = atmega.get_simavr_avr();
+	printf("init robot\r\n");
+	robot bot(json_config);
 
-	printf("init goldboard\r\n");
-	goldboard gb(avr);
-
-	printf("init peripherie\r\n");
-	cmps11 kompass;
-	pixy video;
-	usring ring;
-	pcf8574 pcf1(0x4A);
-	pcf8574 pcf2(0x44);
-	pcf8574 pcf3(0x45);
-
-	gb.add_i2c_device(kompass);
-	gb.add_i2c_device(video);
-	gb.add_i2c_device(ring);
-	gb.add_i2c_device(pcf1);
-	gb.add_i2c_device(pcf2);
-	gb.add_i2c_device(pcf3);
-
+	printf("init user_interface\r\n");
+	user_interface terminal_output;
 	printf("start simulation\r\n");
 	for (;;) {
-		int state = avr_run(avr);
-		if (state == cpu_Done || state == cpu_Crashed)
-			break;
-		std::cout << gb.get_serial_data();
+		bot.run(50);
+		terminal_output.serial_output += bot.gb->get_serial_data();
+		terminal_output.robot_info = "";
+		terminal_output.robot_info += "zeit:   \t" + std::to_string(bot.gb->get_time())  			  + " ms\n";
+		terminal_output.robot_info += "motor 0: \t" + std::to_string(bot.gb->get_motor_speed(0)) + "\n";
+		terminal_output.robot_info += "motor 1: \t" + std::to_string(bot.gb->get_motor_speed(1)) + "\n";
+		terminal_output.robot_info += "motor 2: \t" + std::to_string(bot.gb->get_motor_speed(2)) + "\n";
+		terminal_output.robot_info += "motor 3: \t" + std::to_string(bot.gb->get_motor_speed(3)) + "\n";
+		terminal_output.robot_info += "led 0:   \t" + std::to_string(bot.gb->get_led_status(0)) + "\n";
+		terminal_output.robot_info += "led 1:   \t" + std::to_string(bot.gb->get_led_status(1)) + "\n";
+		terminal_output.robot_info += "power 0: \t" + std::to_string(bot.gb->get_power_pin(0)) + "\n";
+		terminal_output.robot_info += "power 1: \t" + std::to_string(bot.gb->get_power_pin(1)) + "\n";
+		terminal_output.print();
 	}
 	printf("finished\r\n");
-	avr_terminate(avr);
 }

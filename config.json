@@ -1,0 +1,22 @@
+{
+  "firmware" : "gb_programm.hex",
+  "i2c_devices" : [
+    {
+       "type" : "PIXY",
+       "heading" : 0,
+       "tilt" : -35
+    },
+    {
+       "type" : "USRING",
+       "heading" : 0
+    },
+    {
+       "type" : "PCF8574",
+       "address" : 74
+    },
+    {
+       "type" : "PCF8574",
+       "address" : 70
+    }
+  ]
+}

@@ -17,7 +17,7 @@ goldboard::goldboard(struct avr_t* aavr)
 }
 
 goldboard::~goldboard(){
-
+  avr_terminate(avr);
 }
 
 void goldboard::add_i2c_device(i2c_device &device){
@@ -26,7 +26,7 @@ void goldboard::add_i2c_device(i2c_device &device){
 
 //interface function
 int goldboard::get_led_status(int id){
-
+  return 0;
 }
 
 double goldboard::get_motor_speed(int id){
@@ -43,12 +43,28 @@ double goldboard::get_power_pin(int id){
 }
 
 std::string goldboard::get_serial_data(){
-  if(uart_obj.is_empty())
-    return std::string("");
-  else
-    return std::string(1,uart_obj.read_char());
+  std::string output = "";
+  while(!uart_obj.is_empty()){
+    output += std::string(1,uart_obj.read_char());
+  }
+  return output;
 }
 
 void goldboard::set_button_status(int id, int state){
 
+}
+
+int goldboard::run(int ms){
+  unsigned long start_cycle = avr->cycle;
+  while( avr->cycle-start_cycle < ms*16000)
+  {
+		int state = avr_run(avr);
+		if (state == cpu_Done || state == cpu_Crashed)
+			return -1;
+  }
+  return 0;
+}
+
+int goldboard::get_time(){
+  return avr->cycle/16000;
 }
