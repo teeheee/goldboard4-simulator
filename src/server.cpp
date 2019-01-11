@@ -4,7 +4,7 @@
 
 #ifdef WIN32
   #include <winsock2.h>
-  #include <Ws2tcpip.h>
+//  #include <Ws2tcpip.h>
 #else
   #include <sys/socket.h>
   #include <arpa/inet.h>
@@ -85,7 +85,7 @@ int tcp_server::start_listening(){
 int tcp_server::accept_connection()
 {
     sockaddr_in from;
-    unsigned int fromlen = sizeof(from);
+    int fromlen = sizeof(from);
     printf("waiting for connection...\r\n");
     cSock = accept(sSock, (sockaddr*)&from, &fromlen);
     printf("accepted connection\r\n");
