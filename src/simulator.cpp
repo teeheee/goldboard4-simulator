@@ -12,6 +12,7 @@
 
 
 int main(int argc, char *argv[]){
+	printf("loading gb_programm.hex ...\r\n");
 	atmega32 atmega("gb_programm.hex");
 
 	avr_t * avr = atmega.get_simavr_avr();
