@@ -5,6 +5,7 @@ goldboard::goldboard(struct avr_t* aavr)
           pcf_digital(0x7E),
           uart_obj(aavr)
 {
+  printf("init goldboard\r\n");
   avr = aavr;
   init_pwm(avr, &motor_pwm[0], 'B', 0);
   init_pwm(avr, &motor_pwm[1], 'B', 1);
@@ -23,6 +24,36 @@ goldboard::~goldboard(){
 void goldboard::add_i2c_device(i2c_device &device){
   device.attach(avr);
 }
+
+void goldboard::set_state(Json &data){
+  set_button_status(0, data["buttons"][0]);
+  set_button_status(1, data["buttons"][1]);
+}
+
+Json goldboard::get_state(){
+  json11:Json json_data;
+
+  json_data["time"] = get_time();
+
+  json_data["goldboard"] = Json();
+  json_data["goldboard"]["motor"] = Json::array();
+  for(int i = 0; i < 4; i++)
+    json_data["goldboard"]["motor"][i] = (int)get_motor_speed(i);
+
+  json_data["goldboard"]["power_pin"] = Json::array();
+  json_data["goldboard"]["power_pin"][0] = (int)get_power_pin(0);
+  json_data["goldboard"]["power_pin"][1] = (int)get_power_pin(1);
+
+  json_data["goldboard"]["led"] = Json::array();
+  json_data["goldboard"]["led"][0] = (int)get_led_status(0);
+  json_data["goldboard"]["led"][1] = (int)get_led_status(1);
+
+  json_data["goldboard"]["serial"] = get_serial_data().c_str();
+
+  return json_data;
+}
+
+
 
 //interface function
 int goldboard::get_led_status(int id){

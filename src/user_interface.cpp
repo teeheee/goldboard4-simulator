@@ -66,6 +66,6 @@ void user_interface::print(){
     cout << "\n";
 }
 
-void user_interface::update_info(json11::Json *state){
+void user_interface::update_info(Json *state){
 
 }

@@ -85,7 +85,7 @@ int tcp_server::start_listening(){
 int tcp_server::accept_connection()
 {
     sockaddr_in from;
-    int fromlen = sizeof(from);
+    unsigned int fromlen = sizeof(from);
     printf("waiting for connection...\r\n");
     cSock = accept(sSock, (sockaddr*)&from, &fromlen);
     printf("accepted connection\r\n");
@@ -93,7 +93,7 @@ int tcp_server::accept_connection()
     return cSock;
 }
 
-int tcp_server::receive_json(json11::Json* packet){
+int tcp_server::receive_json(Json* packet){
   std::string data = "";
   while(1)
   {
@@ -108,8 +108,7 @@ int tcp_server::receive_json(json11::Json* packet){
            {
               if (data.length() > 0)
               {
-                 std::string err_comment;
-                 packet->parse(data, err_comment);
+                 packet->parse(data);
                  return 0;
               }
            }
@@ -126,8 +125,8 @@ int tcp_server::receive_json(json11::Json* packet){
 
 }
 
-int tcp_server::send_json(json11::Json* packet){
-  std::string data = packet->dump();
+int tcp_server::send_json(Json* packet){
+  std::string data = packet->format();
   send(cSock, data.c_str(), data.length(), 0);
   return 0;
 }

@@ -22,8 +22,8 @@ public:
     tcp_server(int);
     virtual ~tcp_server();
     int start_listening();
-    int receive_json(json11::Json* packet);
-    int send_json(json11::Json* packet);
+    int receive_json(Json* packet);
+    int send_json(Json* packet);
 
 protected:
     int port;

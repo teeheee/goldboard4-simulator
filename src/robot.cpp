@@ -1,41 +1,39 @@
 #include "robot.h"
 #include <iostream>
 
-robot::robot(json11::Json &config){
-  if(!config["firmware"].is_string()){
+robot::robot(Json &config){
+  if(config["firmware"] == Json::null){
     printf("firmware string missing in config.json\r\n");
     exit(0);
   }
-
-  atmega = new atmega32(config["firmware"].string_value().c_str());
+  std::string file_name = config["firmware"];
+  atmega = new atmega32(file_name.c_str());
   gb = new goldboard(atmega->get_simavr_avr());
 
-  if(!config["i2c_devices"].is_array()){
-    printf("i2c_devices is not an array\r\n");
-    exit(0);
-  }
-  std::vector<json11::Json> json_i2c_devices = config["i2c_devices"].array_items();
+  printf("start parsing devices\r\n");
+  Json device_config = config["devices"];
+  int number_of_devices = device_config.size();
 
-  for(int i = 0; i < json_i2c_devices.size(); i++){
-    if(!json_i2c_devices[i]["type"].is_string()){
-        printf("i2c_device attribute type is not an string\r\n");
-        exit(0);
-    }
+  for(int i = 0; i < number_of_devices; i++){
+    std::string type = config["devices"][i]["type"];
+    std::cout << "generate device " << type << std::endl;
 
-    if(json_i2c_devices[i]["type"].string_value() == std::string("CMPS11")){
+    if(type == std::string("CMPS11")){
       printf("added CMPS11\r\n");
-      add_i2c_device(new cmps11());
-    } else if(json_i2c_devices[i]["type"].string_value() == std::string("PIXY")){
+      i2c_device* d = new cmps11();
+      add_device(d);
+    } else if(type == std::string("PIXY")){
       printf("added PIXY\r\n");
-      add_i2c_device(new pixy());
-    } else if(json_i2c_devices[i]["type"].string_value() == std::string("PCF8574")){
+      add_device(new pixy());
+    } else if(type == std::string("PCF8574")){
       printf("added PCF8574\r\n");
-      add_i2c_device(new pcf8574(json_i2c_devices[i]["address"].int_value()));
-    } else if(json_i2c_devices[i]["type"].string_value() == std::string("USRING")){
+      int address = device_config[i]["address"];
+      add_device(new pcf8574(address));
+    } else if(type == std::string("USRING")){
       printf("added USRING\r\n");
-      add_i2c_device(new usring());
+      add_device(new usring());
     } else {
-      std::cout << "unknown i2c device: " << json_i2c_devices[i]["type"].string_value() << std::endl;
+      std::cout << "unknown device: " << type << std::endl;
       exit(0);
     }
   }
@@ -44,7 +42,7 @@ robot::robot(json11::Json &config){
 robot::~robot(){
   delete gb;
   delete atmega;
-  for (i2c_device* device : i2c_device_list) {
+  for (device* device : device_list) {
         delete device;
   }
 }
@@ -58,12 +56,38 @@ void robot::run(int ms){
 }
 
 
-json11::Json* robot::get_state(){
-  
+Json robot::get_state(){
+  Json data = gb->get_state();
+  Json json_devices = Json::array();
+  int index = 0;
+  for(device* part : device_list){
+    json_devices[index++] = part->get_state();
+  }
+  data["devices"] = json_devices;
+  return data;
 }
 
 
-void robot::add_i2c_device(i2c_device* device){
-  i2c_device_list.push_front(device);
-  gb->add_i2c_device(*device);
+void robot::set_state(Json& data){
+  gb->set_state(data);
+  Json json_devices = data["devices"];
+  for(int json_index = 0; json_index < json_devices.size(); json_index++){
+    for(device* part : device_list){
+      int json_id = json_devices[json_index]["id"];
+      int device_id = part->get_id();
+      if(json_id == device_id){
+        Json part_state = json_devices[json_index];
+        part->set_state(part_state);
+      }
+    }
+  }
+}
+
+void robot::add_device(device* device){
+  device_list.push_front(device);
+  if(device->get_type() == I2C_TYPE){
+    gb->add_i2c_device((i2c_device&)*device);
+  }else if(device->get_type() == DIGITAL_TYPE){
+    printf("type not implemented");
+  }
 }

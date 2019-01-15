@@ -23,19 +23,20 @@ atmega32::atmega32(const char* firmware_file_name){
 		fprintf(stderr, "Unable to load IHEX file %s\n", firmware_file_name);
 		exit(1);
 	}
-	printf("Loaded %d section of ihex\n", cnt);
+	//printf("Loaded %d section of ihex\n", cnt);
+	printf("load firmware\r\n");
 	for (int ci = 0; ci < cnt; ci++) {
 		if (chunk[ci].baseaddr < (1*1024*1024)) {
 			f.flash = chunk[ci].data;
 			f.flashsize = chunk[ci].size;
 			f.flashbase = chunk[ci].baseaddr;
-			printf("Load HEX flash %08x, %d\n", f.flashbase, f.flashsize);
+			printf("\tLoad HEX flash %08x, %d\n", f.flashbase, f.flashsize);
 		} else if (chunk[ci].baseaddr >= AVR_SEGMENT_OFFSET_EEPROM ||
 				chunk[ci].baseaddr + loadBase >= AVR_SEGMENT_OFFSET_EEPROM) {
 			// eeprom!
 			f.eeprom = chunk[ci].data;
 			f.eesize = chunk[ci].size;
-			printf("Load HEX eeprom %08x, %d\n", chunk[ci].baseaddr, f.eesize);
+			printf("\tLoad HEX eeprom %08x, %d\n", chunk[ci].baseaddr, f.eesize);
 		}
 	}
 	strcpy(f.mmcu, "atmega32\0");

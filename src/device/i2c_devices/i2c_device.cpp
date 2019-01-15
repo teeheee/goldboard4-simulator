@@ -49,7 +49,7 @@ static void i2c_device_hook(struct avr_irq_t * irq, uint32_t value, void* adevic
 }
 
 
-i2c_device::i2c_device(uint8_t aaddress, const char* name){
+i2c_device::i2c_device(uint8_t aaddress, const char* name)  : device(){
   address = aaddress;
   selected = 0;
   c_names[0] = (std::string(name) + "_in").c_str();

@@ -1,5 +1,5 @@
 
-OS=winlinux
+OS=linux
 
 TARGET_EXEC ?= simulator
 

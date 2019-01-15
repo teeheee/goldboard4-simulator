@@ -1,232 +1,286 @@
-/* json11
+/*
+ * This file is part of json11 project (https://github.com/borisgontar/json11).
  *
- * json11 is a tiny JSON library for C++11, providing JSON parsing and serialization.
- *
- * The core object provided by the library is json11::Json. A Json object represents any JSON
- * value: null, bool, number (int or double), string (std::string), array (std::vector), or
- * object (std::map).
- *
- * Json objects act like values: they can be assigned, copied, moved, compared for equality or
- * order, etc. There are also helper methods Json::dump, to serialize a Json to a string, and
- * Json::parse (static) to parse a std::string as a Json object.
- *
- * Internally, the various types of Json object are represented by the JsonValue class
- * hierarchy.
- *
- * A note on numbers - JSON specifies the syntax of number formatting but not its semantics,
- * so some JSON implementations distinguish between integers and floating-point numbers, while
- * some don't. In json11, we choose the latter. Because some JSON implementations (namely
- * Javascript itself) treat all numbers as the same type, distinguishing the two leads
- * to JSON that will be *silently* changed by a round-trip through those implementations.
- * Dangerous! To avoid that risk, json11 stores all numbers as double internally, but also
- * provides integer helpers.
- *
- * Fortunately, double-precision IEEE754 ('double') can precisely store any integer in the
- * range +/-2^53, which includes every 'int' on most systems. (Timestamps often use int64
- * or long long to avoid the Y2038K problem; a double storing microseconds since some epoch
- * will be exact for +/- 275 years.)
+ * Copyright (c) 2013 Boris Gontar.
+ * This library is free software; you can redistribute it and/or modify
+ * it under the terms of the MIT license. See LICENSE for details.
  */
 
-/* Copyright (c) 2013 Dropbox, Inc.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
+// Version 0.6.5, 2013-11-07
 
-#pragma once
+#ifndef JSON11_H_
+#define JSON11_H_
 
-#include <string>
+#include <iostream>
 #include <vector>
 #include <map>
-#include <memory>
+#include <set>
+#include <regex>
+#include <cfloat>
+#include <stdexcept>
 #include <initializer_list>
 
-#ifdef _MSC_VER
-    #if _MSC_VER <= 1800 // VS 2013
-        #ifndef noexcept
-            #define noexcept throw()
-        #endif
-
-        #ifndef snprintf
-            #define snprintf _snprintf_s
-        #endif
-    #endif
-#endif
-
-namespace json11 {
-
-enum JsonParse {
-    STANDARD, COMMENTS
-};
-
-class JsonValue;
-
-class Json final {
+class Json {
 public:
-    // Types
     enum Type {
-        NUL, NUMBER, BOOL, STRING, ARRAY, OBJECT
+        JSNULL, BOOL, NUMBER, STRING, ARRAY, OBJECT
     };
-
-    // Array and object typedefs
-    typedef std::vector<Json> array;
-    typedef std::map<std::string, Json> object;
-
-    // Constructors for the various types of JSON value.
-    Json() noexcept;                // NUL
-    Json(std::nullptr_t) noexcept;  // NUL
-    Json(double value);             // NUMBER
-    Json(int value);                // NUMBER
-    Json(bool value);               // BOOL
-    Json(const std::string &value); // STRING
-    Json(std::string &&value);      // STRING
-    Json(const char * value);       // STRING
-    Json(const array &values);      // ARRAY
-    Json(array &&values);           // ARRAY
-    Json(const object &values);     // OBJECT
-    Json(object &&values);          // OBJECT
-
-    // Implicit constructor: anything with a to_json() function.
-    template <class T, class = decltype(&T::to_json)>
-    Json(const T & t) : Json(t.to_json()) {}
-
-    // Implicit constructor: map-like objects (std::map, std::unordered_map, etc)
-    template <class M, typename std::enable_if<
-        std::is_constructible<std::string, decltype(std::declval<M>().begin()->first)>::value
-        && std::is_constructible<Json, decltype(std::declval<M>().begin()->second)>::value,
-            int>::type = 0>
-    Json(const M & m) : Json(object(m.begin(), m.end())) {}
-
-    // Implicit constructor: vector-like objects (std::list, std::vector, std::set, etc)
-    template <class V, typename std::enable_if<
-        std::is_constructible<Json, decltype(*std::declval<V>().begin())>::value,
-            int>::type = 0>
-    Json(const V & v) : Json(array(v.begin(), v.end())) {}
-
-    // This prevents Json(some_pointer) from accidentally producing a bool. Use
-    // Json(bool(some_pointer)) if that behavior is desired.
-    Json(void *) = delete;
-
-    // Accessors
-    Type type() const;
-
-    bool is_null()   const { return type() == NUL; }
-    bool is_number() const { return type() == NUMBER; }
-    bool is_bool()   const { return type() == BOOL; }
-    bool is_string() const { return type() == STRING; }
-    bool is_array()  const { return type() == ARRAY; }
-    bool is_object() const { return type() == OBJECT; }
-
-    // Return the enclosed value if this is a number, 0 otherwise. Note that json11 does not
-    // distinguish between integer and non-integer numbers - number_value() and int_value()
-    // can both be applied to a NUMBER-typed object.
-    double number_value() const;
-    int int_value() const;
-
-    // Return the enclosed value if this is a boolean, false otherwise.
-    bool bool_value() const;
-    // Return the enclosed string if this is a string, "" otherwise.
-    const std::string &string_value() const;
-    // Return the enclosed std::vector if this is an array, or an empty vector otherwise.
-    const array &array_items() const;
-    // Return the enclosed std::map if this is an object, or an empty map otherwise.
-    const object &object_items() const;
-
-    // Return a reference to arr[i] if this is an array, Json() otherwise.
-    const Json & operator[](size_t i) const;
-    // Return a reference to obj[key] if this is an object, Json() otherwise.
-    const Json & operator[](const std::string &key) const;
-
-    // Serialize.
-    void dump(std::string &out) const;
-    std::string dump() const {
-        std::string out;
-        dump(out);
-        return out;
-    }
-
-    // Parse. If parse fails, return Json() and assign an error message to err.
-    static Json parse(const std::string & in,
-                      std::string & err,
-                      JsonParse strategy = JsonParse::STANDARD);
-    static Json parse(const char * in,
-                      std::string & err,
-                      JsonParse strategy = JsonParse::STANDARD) {
-        if (in) {
-            return parse(std::string(in), err, strategy);
-        } else {
-            err = "null input";
-            return nullptr;
-        }
-    }
-    // Parse multiple objects, concatenated or separated by whitespace
-    static std::vector<Json> parse_multi(
-        const std::string & in,
-        std::string::size_type & parser_stop_pos,
-        std::string & err,
-        JsonParse strategy = JsonParse::STANDARD);
-
-    static inline std::vector<Json> parse_multi(
-        const std::string & in,
-        std::string & err,
-        JsonParse strategy = JsonParse::STANDARD) {
-        std::string::size_type parser_stop_pos;
-        return parse_multi(in, parser_stop_pos, err, strategy);
-    }
-
-    bool operator== (const Json &rhs) const;
-    bool operator<  (const Json &rhs) const;
-    bool operator!= (const Json &rhs) const { return !(*this == rhs); }
-    bool operator<= (const Json &rhs) const { return !(rhs < *this); }
-    bool operator>  (const Json &rhs) const { return  (rhs < *this); }
-    bool operator>= (const Json &rhs) const { return !(*this < rhs); }
-
-    /* has_shape(types, err)
-     *
-     * Return true if this is a JSON object and, for each item in types, has a field of
-     * the given type. If not, return false and set err to a descriptive message.
-     */
-    typedef std::initializer_list<std::pair<std::string, Type>> shape;
-    bool has_shape(const shape & types, std::string & err) const;
-
 private:
-    std::shared_ptr<JsonValue> m_ptr;
+    struct Schema;  // forward dcl
+    struct Node {
+    	unsigned refcnt;
+        Node(unsigned init = 0);
+        virtual ~Node();
+        virtual Type type() const { return Type::JSNULL; }
+        virtual void print(std::ostream& out) const { out << "null"; }
+        virtual void traverse(void (*f)(const Node*)) const { f(this); }
+        virtual bool contains(const Node* that) const { return false; }
+        virtual bool operator == (const Node& that) const { return this == &that; }
+        virtual bool is_schema() const { return false; }
+        void unref();
+#ifdef WITH_SCHEMA
+        virtual void validate(const Schema& schema, std::vector<const Node*>&) const;
+#endif
+#ifdef TEST
+        static std::vector<Node*> nodes;
+        static void test();
+#endif
+        static Node null, undefined;
+    };
+    //
+    struct Bool : Node {
+        Bool(bool x) { refcnt = 1; }
+        Type type() const override { return Type::BOOL; }
+        void print(std::ostream& out) const override;
+        static Bool T;
+        static Bool F;
+    };
+    //
+    struct Number : Node {
+        long double value;
+        int prec;
+        Number(long double x) { prec = LDBL_DIG; value = x; }
+        Number(double x) { prec = DBL_DIG; value = x; }
+        Number(float x) { prec = FLT_DIG; value = x; }
+        Number(long long x) { prec = DBL_DIG; value = x; }
+        Number(long x) { prec = -1; value = x; }
+        Number(int x) { prec = -1; value = x; }
+        Number(std::istream&);
+        Type type() const override { return Type::NUMBER; }
+        void print(std::ostream& out) const override;
+        bool operator == (const Node& that) const override;
+#ifdef WITH_SCHEMA
+        void validate(const Schema& schema, std::vector<const Node*>&) const override;
+#endif
+    };
+    //
+    struct String : Node {
+        std::string value;
+        String(std::string s) { value = s; }
+        String(std::istream&);
+        Type type() const override { return Type::STRING; }
+        void print(std::ostream& out) const override;
+        bool operator == (const Node& that) const override;
+#ifdef WITH_SCHEMA
+        void validate(const Schema& schema, std::vector<const Node*>&) const override;
+#endif
+    };
+    //
+    struct Array : Node {
+        std::vector<Node*> list;
+        virtual ~Array();
+        Type type() const override { return Type::ARRAY; }
+        void print(std::ostream&) const override;
+        void traverse(void (*f)(const Node*)) const override;
+        void add(Node*);
+        void ins(int, Node*);
+        void del(int);
+        void repl(int, Node*);
+        bool contains(const Node*) const override;
+        bool operator == (const Node& that) const override;
+#ifdef WITH_SCHEMA
+        void validate(const Schema& schema, std::vector<const Node*>&) const override;
+#endif
+    };
+    //
+    struct Object : Node {
+        std::map<const std::string*, Node*> map;
+        virtual ~Object();
+        Type type() const override { return Type::OBJECT; }
+        void print(std::ostream&) const override;
+        void traverse(void (*f)(const Node*)) const override;
+        Node* get(const std::string&) const;
+        void set(const std::string&, Node*);
+        bool contains(const Node*) const override;
+        bool operator == (const Node& that) const override;
+#ifdef WITH_SCHEMA
+        void validate(const Schema& schema, std::vector<const Node*>&) const override;
+#endif
+    };
+    //
+#ifdef WITH_SCHEMA
+    struct Schema : Node {
+        Schema(Node*);
+        virtual ~Schema();
+        std::string uri;
+        std::string s_type;
+        Array* s_enum = nullptr;
+        std::vector<Schema*> allof;
+        std::vector<Schema*> anyof;
+        std::vector<Schema*> oneof;
+        Schema* s_not = nullptr;
+        long double max_num = LDBL_MAX;
+        long double min_num = -LDBL_MAX;
+        long double mult_of = 0;
+        bool max_exc = false, min_exc = false;
+        unsigned long max_len = UINT32_MAX;
+        unsigned long min_len = 0;
+        std::regex* pattern = nullptr;  // regex
+        Schema* item = nullptr;
+        std::vector<Schema*> items;
+        Schema* add_items = nullptr;
+        bool add_items_bool = false;
+        bool unique_items = false;
+        Object* props = nullptr;
+        Object* pat_props = nullptr;
+        Schema* add_props = nullptr;
+        bool add_props_bool = false;
+        Array* required = nullptr;
+        Object* deps = nullptr;
+        Object* defs = nullptr;
+        Node* deflt = nullptr;
+        bool is_schema() const { return true; }
+    };
+#endif
+    //
+    class Property {
+        Node* host;
+        std::string key;
+        int index;
+        Json target() const;
+    public:
+        Property(Node*, const std::string&);
+        Property(Node*, int);
+        operator Json() const { return target(); }
+        operator bool() { return target(); }
+        operator int() { return target(); }
+        operator long() { return target(); }
+        operator long long() { return target(); }
+        operator float() { return target(); }
+        operator double() { return target(); }
+        operator long double() { return target(); }
+        operator std::string() const { return target(); }
+        Property operator [] (const std::string& k) { return target()[k]; }
+        Property operator [] (const char* k) { return (*this)[std::string(k)]; }
+        Property operator [] (int i) {return target()[i]; }
+        Json operator = (const Json&);
+        Json operator = (const Property&);
+        bool operator == (const Json& js) const { return (Json)(*this) == js; }
+        bool operator != (const Json& js) const { return !(*this == js); }
+        std::vector<std::string> keys() { return target().keys(); }
+        bool has(const std::string& key) const { return target().has(key); }
+        friend std::ostream& operator << (std::ostream& out, const Property& p) {
+            return out << (Json)p;
+        }
+        friend Json;
+    };
+    Array* mkarray();
+    Object* mkobject();
+    static std::set<std::string> keyset;   // all propery names
+    static int level;   // for pretty printing
+    //
+    Json(Node* node) {
+        (root = (node == nullptr ? &Node::null : node))->refcnt++;
+    }
+    Node* root;
+    //
+public:
+    // constructors
+    Json() { (root = &Node::null)->refcnt++; }
+    Json(const Json& that);
+    Json(Json&& that);
+    Json(std::istream&, bool full = true);   // parse
+    virtual ~Json();
+    //
+    // initializers
+    Json& operator = (const Json&);
+    Json& operator = (Json&&);
+    //
+    // more constructors
+    Json(bool x) { (root = (x ? &Bool::T : &Bool::F))->refcnt++; }
+    Json(int x) { (root = new Number(x))->refcnt++; }
+    Json(long x) { (root = new Number(x))->refcnt++; }
+    Json(long long x) { (root = new Number(x))->refcnt++; }
+    Json(float x) { (root = new Number(x))->refcnt++; }
+    Json(double x) { (root = new Number(x))->refcnt++; }
+    Json(long double x) { (root = new Number(x))->refcnt++; }
+    Json(std::string& s) { (root = new String(s))->refcnt++; }
+    Json(const char* s) { (root = new String(s))->refcnt++; }
+    Json(std::initializer_list<Json>);
+    Json(const Property& p) { (root = p.target().root)->refcnt++; }
+    //
+    // casts
+    Type type() const { return root->type(); }
+    operator bool() const;
+    operator int() const;
+    operator long() const;
+    operator long long() const;
+    operator float() const;
+    operator double() const;
+    operator long double() const;
+    operator std::string() const;
+    //
+    // object
+    Json& set(std::string key, const Json& val);
+    Json get(const std::string& key) const;
+    bool has(const std::string& key) const;
+    std::vector<std::string> keys();
+    //
+    // array
+    Json& operator << (const Json&);
+    void insert(int index, const Json&);
+    void erase(int index);
+    Json& replace(int index, const Json&);
+    //
+    // subscript
+    size_t size() const;
+    Json::Property operator [] (const std::string&);
+    Json::Property operator [] (const char* k) { return (*this)[std::string(k)]; }
+    Json::Property operator [] (int);
+    //
+    // stringify
+    std::string stringify() { return format(); }
+    std::string format();
+    friend std::ostream& operator << (std::ostream&, const Json&);
+    friend std::istream& operator >> (std::istream&, Json&);
+    //
+    // compare
+    bool operator == (const Json&) const;
+    bool operator != (const Json& that) const { return !(*this == that); }
+    //
+#ifdef WITH_SCHEMA
+    // schema
+    bool to_schema(std::string* reason);
+    bool valid(Json& schema, std::string* reason = nullptr);
+#endif
+    //
+    static Json null, undefined;
+    static Json parse(const std::string&);
+    static Json array() { return new Array(); }    // returns empty array
+    static Json object() { return new Object(); }  // returns empty object
+    static int indent;  // for pretty printing
+    //
+    struct parse_error : std::runtime_error {
+        unsigned line = 0, col = 0;
+        parse_error(const char* msg, std::istream& in);
+    };
+    struct use_error : std::logic_error {
+        use_error(const char* msg) : std::logic_error(msg) {}
+        use_error(const std::string msg) : std::logic_error(msg.c_str()) {}
+    };
+#ifdef TEST
+    static void test() { Node::test(); }
+#endif
 };
 
-// Internal class hierarchy - JsonValue objects are not exposed to users of this API.
-class JsonValue {
-protected:
-    friend class Json;
-    friend class JsonInt;
-    friend class JsonDouble;
-    virtual Json::Type type() const = 0;
-    virtual bool equals(const JsonValue * other) const = 0;
-    virtual bool less(const JsonValue * other) const = 0;
-    virtual void dump(std::string &out) const = 0;
-    virtual double number_value() const;
-    virtual int int_value() const;
-    virtual bool bool_value() const;
-    virtual const std::string &string_value() const;
-    virtual const Json::array &array_items() const;
-    virtual const Json &operator[](size_t i) const;
-    virtual const Json::object &object_items() const;
-    virtual const Json &operator[](const std::string &key) const;
-    virtual ~JsonValue() {}
-};
-
-} // namespace json11
+#endif /* JSON11_H_ */

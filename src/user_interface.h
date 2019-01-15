@@ -10,7 +10,7 @@ public:
   user_interface();
   ~user_interface();
   void print();
-  void update_info(json11::Json *state);
+  void update_info(Json *state);
 //private:
   std::string serial_output;
   std::string robot_info;

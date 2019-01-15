@@ -7,13 +7,16 @@
 #include "sim_irq.h"
 #include "avr_twi.h"
 
-class i2c_device{
+#include "device.h"
+
+class i2c_device : public device{
 public:
   i2c_device(uint8_t address, const char* name);
   ~i2c_device();
   virtual uint8_t read() = 0;
   virtual void write(uint8_t data) = 0;
   void attach(struct avr_t * avr);
+  int get_type(){ return I2C_TYPE; }
 
   uint8_t address;
   uint8_t selected;

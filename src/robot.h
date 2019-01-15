@@ -15,17 +15,18 @@
 
 class robot{
 public:
-  robot(json11::Json &config);
+  robot(Json &config);
   ~robot();
   void run(int ms);
-  json11::Json* get_state();
+  Json get_state();
+  void set_state(Json& data);
 
   goldboard* gb; //should be private
 private:
-  void add_i2c_device(i2c_device* device);
+  void add_device(device* device);
 
   atmega32* atmega;
-  std::list<i2c_device*> i2c_device_list;
+  std::list<device*> device_list;
 };
 
 #endif
