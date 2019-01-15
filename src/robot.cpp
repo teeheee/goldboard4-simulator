@@ -18,23 +18,23 @@ robot::robot(Json &config){
     std::string type = config["devices"][i]["type"];
     std::cout << "generate device " << type << std::endl;
 
-    if(type == std::string("CMPS11")){
-      printf("added CMPS11\r\n");
-      i2c_device* d = new cmps11();
+    i2c_device* d = NULL;
+    if(type == std::string("CMPS11"))
+      d = new cmps11();
+    else if(type == std::string("PIXY"))
+      d = new pixy();
+    else if(type == std::string("PCF8574"))
+      d = new pcf8574();
+    else if(type == std::string("USRING"))
+      d = new usring();
+
+    if(d != NULL){
+      Json config = device_config[i];
+      d->set_config(config);
+      printf("added %s\r\n", type.c_str());
       add_device(d);
-    } else if(type == std::string("PIXY")){
-      printf("added PIXY\r\n");
-      add_device(new pixy());
-    } else if(type == std::string("PCF8574")){
-      printf("added PCF8574\r\n");
-      int address = device_config[i]["address"];
-      add_device(new pcf8574(address));
-    } else if(type == std::string("USRING")){
-      printf("added USRING\r\n");
-      add_device(new usring());
     } else {
-      std::cout << "unknown device: " << type << std::endl;
-      exit(0);
+      printf("unknown device\r\n");
     }
   }
 }
@@ -59,9 +59,10 @@ void robot::run(int ms){
 Json robot::get_state(){
   Json data = gb->get_state();
   Json json_devices = Json::array();
-  int index = 0;
   for(device* part : device_list){
-    json_devices[index++] = part->get_state();
+    Json state = part->get_state();
+    state["id"] = part->get_id();
+    json_devices << state;
   }
   data["devices"] = json_devices;
   return data;
@@ -69,11 +70,13 @@ Json robot::get_state(){
 
 
 void robot::set_state(Json& data){
-  gb->set_state(data);
+  Json json_goldboard = data["goldboard"];
+  gb->set_state(json_goldboard);
   Json json_devices = data["devices"];
   for(int json_index = 0; json_index < json_devices.size(); json_index++){
     for(device* part : device_list){
-      int json_id = json_devices[json_index]["id"];
+      Json json_part = json_devices[json_index];
+      int json_id = json_part["id"];
       int device_id = part->get_id();
       if(json_id == device_id){
         Json part_state = json_devices[json_index];

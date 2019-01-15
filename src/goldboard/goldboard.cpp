@@ -7,6 +7,8 @@ goldboard::goldboard(struct avr_t* aavr)
 {
   printf("init goldboard\r\n");
   avr = aavr;
+  button_state[0] = 0;
+  button_state[1] = 0;
   init_pwm(avr, &motor_pwm[0], 'B', 0);
   init_pwm(avr, &motor_pwm[1], 'B', 1);
   init_pwm(avr, &motor_pwm[2], 'B', 2);
@@ -26,29 +28,48 @@ void goldboard::add_i2c_device(i2c_device &device){
 }
 
 void goldboard::set_state(Json &data){
-  set_button_status(0, data["buttons"][0]);
-  set_button_status(1, data["buttons"][1]);
+  Json button = data["button"];
+  set_button_status(0, (int)button[0]);
+  set_button_status(1, (int)button[1]);
 }
 
 Json goldboard::get_state(){
-  json11:Json json_data;
+  Json json_data;
 
   json_data["time"] = get_time();
 
-  json_data["goldboard"] = Json();
-  json_data["goldboard"]["motor"] = Json::array();
-  for(int i = 0; i < 4; i++)
-    json_data["goldboard"]["motor"][i] = (int)get_motor_speed(i);
+  Json json_motor = Json {
+    get_motor_speed(0),
+    get_motor_speed(1),
+    get_motor_speed(2),
+    get_motor_speed(3)
+  };
 
-  json_data["goldboard"]["power_pin"] = Json::array();
-  json_data["goldboard"]["power_pin"][0] = (int)get_power_pin(0);
-  json_data["goldboard"]["power_pin"][1] = (int)get_power_pin(1);
+  Json json_led = Json {
+    get_led_status(0),
+    get_led_status(1)
+  };
 
-  json_data["goldboard"]["led"] = Json::array();
-  json_data["goldboard"]["led"][0] = (int)get_led_status(0);
-  json_data["goldboard"]["led"][1] = (int)get_led_status(1);
+  Json json_power_pin = Json {
+    get_power_pin(0),
+    get_power_pin(1)
+  };
 
-  json_data["goldboard"]["serial"] = get_serial_data().c_str();
+
+  Json json_button = Json {
+    button_state[0],
+    button_state[1]
+  };
+
+  Json json_serial = Json(get_serial_data().c_str());
+
+  Json json_goldboard;
+  json_goldboard["motor"] = json_motor;
+  json_goldboard["power_pin"] = json_power_pin;
+  json_goldboard["led"] = json_led;
+  json_goldboard["button"] = json_button;
+  json_goldboard["serial"] = json_serial;
+  json_data["goldboard"] = json_goldboard;
 
   return json_data;
 }
@@ -61,9 +82,9 @@ int goldboard::get_led_status(int id){
 }
 
 double goldboard::get_motor_speed(int id){
-  if(pcf_motor.read_pins() & (1 << id))
+  if(pcf_motor.read() & (1 << id))
     return get_pwm_value(&motor_pwm[id]);
-  else if(pcf_motor.read_pins() & (1 << id+1))
+  else if(pcf_motor.read() & (1 << id+1))
     return -get_pwm_value(&motor_pwm[id]);
   else
     return 0;
@@ -82,7 +103,7 @@ std::string goldboard::get_serial_data(){
 }
 
 void goldboard::set_button_status(int id, int state){
-
+  button_state[id] = state;
 }
 
 int goldboard::run(int ms){

@@ -35,6 +35,7 @@ private:
   uart uart_obj;
   pcf8574 pcf_motor;
   pcf8574 pcf_digital;
+  int button_state[2];
 };
 
 #endif

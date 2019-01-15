@@ -28,9 +28,11 @@ int main(int argc, char *argv[]){
 	printf("start simulation\r\n");
 	for (;;) {
 		bot.run(50);
-		terminal_output.serial_output = "";
-		terminal_output.robot_info = "";
-		//terminal_output.print();
+		Json state = bot.get_state();
+		terminal_output.update_info(state);
+		terminal_output.print();
+		state = terminal_output.get_new_state(state);
+		bot.set_state(state);
 	}
 	printf("finished\r\n");
 }

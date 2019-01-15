@@ -85,7 +85,12 @@ int tcp_server::start_listening(){
 int tcp_server::accept_connection()
 {
     sockaddr_in from;
+
+    #ifdef WIN32
+    int fromlen = sizeof(from);
+    #else
     unsigned int fromlen = sizeof(from);
+    #endif
     printf("waiting for connection...\r\n");
     cSock = accept(sSock, (sockaddr*)&from, &fromlen);
     printf("accepted connection\r\n");

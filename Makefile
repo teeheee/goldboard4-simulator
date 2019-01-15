@@ -1,13 +1,13 @@
 
-OS=linux
+OS=win
 
 TARGET_EXEC ?= simulator
 
 ifeq ($(OS),win)
-  MING_PATH = /home/ulbrich/other_stuff/mingw/bin
-  CC = $(MING_PATH)/x86_64-w64-mingw32-gcc
-  AS = $(MING_PATH)/x86_64-w64-mingw32-as
-  CXX = $(MING_PATH)/x86_64-w64-mingw32-c++
+  MING_PATH =
+  CC = $(MING_PATH)x86_64-w64-mingw32-gcc
+  AS = $(MING_PATH)x86_64-w64-mingw32-as
+  CXX = $(MING_PATH)x86_64-w64-mingw32-c++
   TARGET_EXEC = simulator.exe
 endif
 
@@ -50,9 +50,9 @@ ifeq ($(OS),winlinux)
 endif
 
 ifeq ($(OS),linux)
-  CFLAGS += -lpthread -lrt -lutil
-  LDFLAGS += -lpthread -lrt -lutil
-	CXXFLAGS += -lpthread -lrt -lutil
+  CFLAGS += -lpthread -lrt -lutil -lncurses
+  LDFLAGS += -lpthread -lrt -lutil -lncurses
+	CXXFLAGS += -lpthread -lrt -lutil -lncurses
 endif
 
 $(BUILD_DIR)/$(TARGET_EXEC): $(OBJS)

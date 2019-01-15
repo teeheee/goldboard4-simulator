@@ -1,5 +1,6 @@
 {
   "firmware" : "gb_programm.hex",
+  "time_steps" : 100,
   "devices" : [{
        "type" : "PIXY",
     },{
@@ -11,7 +12,10 @@
        "address" : 74
     },{
        "type" : "PCF8574",
-       "address" : 70
+       "address" : 68
+    },{
+       "type" : "PCF8574",
+       "address" : 112
     }
   ]
 }

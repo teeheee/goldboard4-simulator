@@ -17,18 +17,12 @@ public:
       id = id_counter;
       id_counter++;
    }
-   void set_state(Json &data){
-      printf("Warning! This set data is not impemented\r\n");
-   }
-   Json get_state(){
-        printf("Warning! This get data is not impemented\r\n");
-        return Json();
-   }
+   virtual void set_state(Json &data) = 0;
+   virtual Json get_state() = 0;
+   virtual void set_config(Json &data) = 0;
+   virtual int get_type() = 0;
    int get_id(){
      return id;
-   }
-   int get_type(){
-     return NO_TYPE;
    }
    static int id_counter;
 };

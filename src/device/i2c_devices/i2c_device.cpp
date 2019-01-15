@@ -1,5 +1,7 @@
 #include "i2c_device.h"
 
+bool device_triggered[256] = {false};
+
 static void i2c_device_hook(struct avr_irq_t * irq, uint32_t value, void* adevice){
   i2c_device* p = (i2c_device*)adevice;
 	avr_twi_msg_irq_t v;
@@ -10,7 +12,12 @@ static void i2c_device_hook(struct avr_irq_t * irq, uint32_t value, void* adevic
 	if (v.u.twi.msg & TWI_COND_STOP) {
 		p->selected = 0;
 	}
-
+  /*
+  uint8_t addr = v.u.twi.addr;
+  if(device_triggered[addr] == false){
+    device_triggered[addr] = true;
+    printf("%d\r\n",addr);
+  }*/
 	/*
 	 * if we receive a start, reset status, check if the slave address is
 	 * meant to be us, and if so reply with an ACK bit
