@@ -12,6 +12,8 @@ robot::robot(Json &config){
 
   printf("start parsing devices\r\n");
   Json device_config = config["devices"];
+  if(device_config == Json::null)
+    return;
   int number_of_devices = device_config.size();
 
   for(int i = 0; i < number_of_devices; i++){

@@ -23,15 +23,28 @@ int main(int argc, char *argv[]){
 	printf("init robot\r\n");
 	robot bot(json_config);
 
+	bool terminal_active = json_config["terminal"];
+	bool server_active = json_config["server"];
+
 	printf("init user_interface\r\n");
 	user_interface terminal_output;
+	printf("init tcp server\r\n");
+	tcp_server server((int)json_config["server_port"]);
+	if(server_active)
+		server.start_listening();
 	printf("start simulation\r\n");
 	for (;;) {
 		bot.run(50);
 		Json state = bot.get_state();
-		terminal_output.update_info(state);
-		terminal_output.print();
-		state = terminal_output.get_new_state(state);
+		if(terminal_active){
+			terminal_output.update_info(state);
+			terminal_output.print();
+			state = terminal_output.get_new_state(state);
+		}
+		if(server_active){
+			server.send_json(&state);
+			server.receive_json(&state);
+		}
 		bot.set_state(state);
 	}
 	printf("finished\r\n");

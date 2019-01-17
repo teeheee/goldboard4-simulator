@@ -1,23 +1,27 @@
 
-OS=win
 
 TARGET_EXEC ?= simulator
 
-ifeq ($(OS),win)
-  MING_PATH =
+ifeq ($(OS),windows)
+  MING_PATH = C:/Mingw/bin/
   CC = $(MING_PATH)x86_64-w64-mingw32-gcc
   AS = $(MING_PATH)x86_64-w64-mingw32-as
   CXX = $(MING_PATH)x86_64-w64-mingw32-c++
   TARGET_EXEC = simulator.exe
-endif
-
-ifeq ($(OS),winlinux)
+else ifeq ($(OS),windows_cross)
   CC = i686-w64-mingw32-gcc
   AS = i686-w64-mingw32-as
   CXX = i686-w64-mingw32-g++
   TARGET_EXEC = simulator.exe
+else ifeq ($(OS),linux)
+  CC = gcc
+  AS = as
+  CXX = g++
+  TARGET_EXEC = simulator
+else
+  $(info OS not set! can be [windows, windows_cross, linux])
+  exit 0
 endif
-
 
 
 BUILD_DIR ?= ./build
@@ -37,13 +41,13 @@ CXXFLAGS ?= $(INC_FLAGS) -MMD -MP -DMCU=atmega32 -std=gnu++11
 LDFLAGS ?= -MMD -MP
 
 
-ifeq ($(OS),win)
+ifeq ($(OS),windows)
   CFLAGS += -lws2_32 -I./avr-libc/include -static-libstdc++
   CXXFLAGS += -lws2_32 -I./avr-libc/include -static-libstdc++
   LDFLAGS += -lws2_32 -static-libstdc++
 endif
 
-ifeq ($(OS),winlinux)
+ifeq ($(OS),windows_cross)
   CFLAGS += -lpthread -lws2_32
   CXXFLAGS += -lpthread -lws2_32
   LDFLAGS += -lpthread -lws2_32
@@ -72,6 +76,9 @@ $(BUILD_DIR)/%.cpp.o: %.cpp
 
 clean:
 	$(RM) -r $(BUILD_DIR)
+
+install:
+	cp simulator /usr/bin/simulator
 
 -include $(DEPS)
 
