@@ -1,14 +1,14 @@
-#Goldboard4 Simulator basierend auf simavr
+# Goldboard4 Simulator basierend auf simavr
 
 Dies ist ein Simulator für das Goldboard4 basierend auf [simavr](https://github.com/buserror/simavr). Er läd das hex file des compilierten Programms und führt es auf dem Pc aus. Zusätzlich können verschiedene Sensoren an dem Simulator angeschlossen werden.
 
-#Was funktioniert
+# Was funktioniert
 
 * Motoren
 * CMPS11
 * PCF8574
 
-#Was funktioniert nicht
+# Was funktioniert nicht
 
 * Buttons
 * Leds
@@ -18,7 +18,7 @@ Dies ist ein Simulator für das Goldboard4 basierend auf [simavr](https://github
 * Analog
 * LCD
 
-#Contents
+# Contents
 
 1. [Benutzung unter Windows](#Benutzung unter Windows)
 1.2. [config.json](#config.json)
@@ -26,12 +26,12 @@ Dies ist ein Simulator für das Goldboard4 basierend auf [simavr](https://github
 1.4. [Konsole](#Konsole)
 1.5. [Server](#Server)
 
-##Benutzung unter Windows
+## Benutzung unter Windows
 
 Lade das Projekt von Github herunter und extrahiere es. Kopiere das compilierte programm (meist main.hex oder <projektname>.hex) in den Ordner mit der simulator.exe Datei. Konfiguriere config.json so wie du es brauchst. Starte simulator.exe.
 Zum ausführen sind nur config.json, die programm Datei, libgcc_s_seh-1.dll und simulator.exe notwendig.
 
-###config.json
+### config.json
 
 config.json ist eine Konfigurationsdatei in der JavaScript Object Notation. Falls etwas nicht funktioniert ist vermutlich ein fehler in dieser Datei.
 
@@ -69,7 +69,7 @@ config.json ist eine Konfigurationsdatei in der JavaScript Object Notation. Fall
 }
 '''
 
-###Devices
+### Devices
 
 Folgende Geräte stehen zur verfügung.
 
@@ -79,7 +79,7 @@ Folgende Geräte stehen zur verfügung.
 * CMPS11
 
 
-###Konsole
+### Konsole
 
 
 Der linke Teil der Ausgabe ist der Serialport der Rechte Teil behinhaltet alle verfügbare Information über das Board.
@@ -89,6 +89,6 @@ Der linke Teil der Ausgabe ist der Serialport der Rechte Teil behinhaltet alle v
 Durch drücken der Nummer 0 können die Taster des Goldboards manipuliert werden.
 Durch drücken der Nummer 2-9 können die angeschlossenen Geräte manipuliert werden. Das Programm wird dabei angehalten.
 
-###Server
+### Server
 
 Der Server sendet eine json formatierte Datei, die den aktuellen Status des Goldboards beinhaltet. In diesem stehen auch alle manipulierbaren Werte wie Kompassrichtung oder Buttonstatus. Durch zurücksenden der gleichen Datei oder einer Manipulierten, wird das Programm ein Schritt weiter Simuliert und die Werte können erneut angepasst werden. Wichtig ist, dass die id der angeschlossenen Geräte nicht verändert wird.
