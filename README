@@ -2,8 +2,23 @@
 
 Dies ist ein Simulator für das Goldboard4 basierend auf [simavr](https://github.com/buserror/simavr). Er läd das hex file des compilierten Programms und führt es auf dem Pc aus. Zusätzlich können verschiedene Sensoren an dem Simulator angeschlossen werden.
 
-#Contents
+#Was funktioniert
 
+* Motoren
+* CMPS11
+* PCF8574
+
+#Was funktioniert nicht
+
+* Buttons
+* Leds
+* Pixy
+* usring
+* DigitalIO
+* Analog
+* LCD
+
+#Contents
 
 1. [Benutzung unter Windows](#Benutzung unter Windows)
 1.2. [config.json](#config.json)
