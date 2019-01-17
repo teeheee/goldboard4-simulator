@@ -1,8 +1,8 @@
 {
   "firmware" : "gb_programm.hex",
   "time_steps" : 100,
-  "terminal" : false,
-  "server" : true,
+  "terminal" : true,
+  "server" : false,
   "server_port" : 3030,
   "devices" : [{
        "type" : "PIXY",
