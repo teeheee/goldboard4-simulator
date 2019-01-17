@@ -18,14 +18,6 @@ Dies ist ein Simulator für das Goldboard4 basierend auf [simavr](https://github
 * Analog
 * LCD
 
-# Contents
-
-1. [Benutzung unter Windows](#Benutzung unter Windows)
-1.2. [config.json](#config.json)
-1.3. [Devices](#Devices)
-1.4. [Konsole](#Konsole)
-1.5. [Server](#Server)
-
 ## Benutzung unter Windows
 
 Lade das Projekt von Github herunter und extrahiere es. Kopiere das compilierte programm (meist main.hex oder <projektname>.hex) in den Ordner mit der simulator.exe Datei. Konfiguriere config.json so wie du es brauchst. Starte simulator.exe.
